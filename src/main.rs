@@ -1,3 +1,4 @@
+use tokio::io::AsyncReadExt;
 use tokio::net::TcpListener;
 use tokio::net::TcpStream;
 
@@ -11,4 +12,9 @@ async fn main() {
     }
 }
 
-async fn process_socket(mut socket: TcpStream) {}
+async fn process_socket(mut socket: TcpStream) {
+    let mut buffer = String::new();
+
+    socket.read_to_string(&mut buffer).await.unwrap();
+    println!("{buffer}");
+}
