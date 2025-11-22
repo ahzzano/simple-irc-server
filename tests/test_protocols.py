@@ -4,6 +4,8 @@ HOST = "127.0.0.1"
 PORT = 25565  
 
 stuff_to_send = [
+	"Traveling in a land down under\n"
+	"USER guest tolmoon tolsun :Ronnie Reagan\n",
 	"NICK YouMakeMeNervous\n",
 	"PASS I_come_from_a_land_down_under\n"
 ]

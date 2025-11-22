@@ -38,14 +38,24 @@ async fn process_socket(socket: TcpStream) {
                     let _ = tx.send(buffer.trim().to_string()).await;
                     println!("Got message");
                 }
-                Err(_) => todo!(),
+                Err(e) => {
+                    eprintln!("{e}");
+                }
             }
         }
     });
 
     while let Some(message) = rx.recv().await {
         println!("GOT = {message}");
-        let _cmd = parse_command(&message);
+
+        match parse_command(&message) {
+            Ok(cmd) => {
+                println!("Found command: {cmd:?}");
+            }
+            Err(response_code) => {
+                let _ = write.write_u8(response_code as u8);
+            }
+        }
 
         let _ = write.write_all(b"walpurgisnact\n").await;
     }
