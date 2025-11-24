@@ -20,6 +20,7 @@ async fn main() {
 }
 
 async fn process_socket(socket: TcpStream) {
+    let addr = socket.peer_addr().unwrap();
     let (read, mut write) = tokio::io::split(socket);
     let mut reader = BufReader::new(read);
 
@@ -51,12 +52,12 @@ async fn process_socket(socket: TcpStream) {
         match parse_command(&message) {
             Ok(cmd) => {
                 println!("Found command: {cmd:?}");
+                let _ = write.write_all(b"walpurgisnact\n").await;
             }
             Err(response_code) => {
-                let _ = write.write_u8(response_code as u8);
+                eprintln!("Err: {response_code:?}");
+                let _ = write.write_u8(response_code as u8).await;
             }
         }
-
-        let _ = write.write_all(b"walpurgisnact\n").await;
     }
 }

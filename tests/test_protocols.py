@@ -7,7 +7,13 @@ stuff_to_send = [
 	"Traveling in a land down under\n"
 	"USER guest tolmoon tolsun :Ronnie Reagan\n",
 	"NICK YouMakeMeNervous\n",
+	"NICK\n",
+	"USER\n",
+	"PASS\n"
 	"PASS I_come_from_a_land_down_under\n"
+	":strangelady USER guest tolmoon tolsun :Ronnie Reagan\n",
+	":strangelady NICK YouMakeMeNervous\n",
+	":strangelady PASS I_come_from_a_land_down_under\n"
 ]
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -18,5 +24,6 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
 		s.sendall(bytes(st, 'utf-8'))
 		
 		res = s.recv(1024)
+		print(f"Received: {res}")
 
 	print('finished')

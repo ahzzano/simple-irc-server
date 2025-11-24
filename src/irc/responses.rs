@@ -9,6 +9,7 @@ pub enum ErrorResponse {
     NoSuchNick = 401,
     NoSuchServer = 402,
     UnknownCommand = 421,
+    NeedMoreParams = 461,
 }
 
 #[derive(Debug)]

@@ -10,18 +10,21 @@ pub enum Command {
 pub fn parse_command(message: &String) -> Result<(String, Command), ErrorResponse> {
     let mut prefix = String::from("");
     let string: Vec<&str> = if message.starts_with(":") {
-        message.split(" ").collect()
-    } else {
         let initial_vec: Vec<&str> = message.split(" ").collect();
         prefix = initial_vec[0].strip_prefix(":").unwrap().into();
         initial_vec[1..].to_vec()
+    } else {
+        message.split(" ").collect()
     };
 
     let cmd = string[0];
 
     let command = match cmd {
+        "NICK" if string.len() < 2 => Err(ErrorResponse::NeedMoreParams),
         "NICK" => Ok(Command::NICK(String::from(string[1]))),
+        "PASS" if string.len() < 2 => Err(ErrorResponse::NeedMoreParams),
         "PASS" => Ok(Command::PASS(String::from(string[1]))),
+        "USER" if string.len() < 4 => Err(ErrorResponse::NeedMoreParams),
         "USER" => {
             let username = String::from(string[1]);
             let hostname = String::from(string[2]);
