@@ -7,7 +7,7 @@ pub enum Command {
     USER(String, String, String, String),
 }
 
-pub fn parse_command(message: &String) -> Result<(String, Command), ErrorResponse> {
+pub fn parse_command(message: &str) -> Result<(String, Command), ErrorResponse> {
     let mut prefix = String::from("");
     let string: Vec<&str> = if message.starts_with(":") {
         let initial_vec: Vec<&str> = message.split(" ").collect();
