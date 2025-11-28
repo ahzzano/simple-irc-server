@@ -13,7 +13,8 @@ stuff_to_send = [
 	"PASS I_come_from_a_land_down_under\n"
 	":strangelady USER guest tolmoon tolsun :Ronnie Reagan\n",
 	":strangelady NICK YouMakeMeNervous\n",
-	":strangelady PASS I_come_from_a_land_down_under\n"
+	":strangelady PASS I_come_from_a_land_down_under\n",
+	"QUIT\n",
 ]
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:

@@ -1,14 +1,22 @@
+use std::collections::HashMap;
+use std::iter::Map;
+use std::net::SocketAddr;
+
+use commands::Command;
+use commands::execute_command;
 use commands::parse_command;
+use responses::ErrorResponse;
 use tokio::io::AsyncBufReadExt;
 use tokio::io::AsyncWriteExt;
 use tokio::io::BufReader;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::mpsc;
+use tokio::sync::oneshot;
 
 pub mod commands;
 pub mod responses;
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct User {
     nickname: String,
     password: String,
@@ -17,6 +25,7 @@ pub struct User {
 #[derive(Debug)]
 pub struct IRCServer {
     listener: TcpListener,
+    users: HashMap<SocketAddr, User>,
 }
 
 impl IRCServer {
@@ -48,11 +57,10 @@ impl IRCServer {
         });
 
         while let Some(message) = rx.recv().await {
-            println!("GOT = {message}");
-
             match parse_command(&message) {
-                Ok(cmd) => {
+                Ok((_prefix, cmd)) => {
                     println!("Found command: {cmd:?}");
+                    let _ = execute_command(self, cmd);
                     let _ = write.write_all(b"walpurgisnact\n").await;
                 }
                 Err(response_code) => {
@@ -66,6 +74,7 @@ impl IRCServer {
     pub async fn new(address: &str) -> Self {
         Self {
             listener: TcpListener::bind(address).await.unwrap(),
+            users: HashMap::new(),
         }
     }
 

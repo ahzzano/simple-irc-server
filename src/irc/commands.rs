@@ -1,10 +1,15 @@
 use crate::irc::responses::ErrorResponse;
 
+use super::{IRCServer, responses::CmdResponse};
+
 #[derive(Debug)]
 pub enum Command {
     PASS(String),
     NICK(String),
     USER(String, String, String, String),
+    QUIT(Option<String>),
+    OPER(String, String),
+    SQUIT(String, String),
 }
 
 pub fn parse_command(message: &str) -> Result<(String, Command), ErrorResponse> {
@@ -38,11 +43,26 @@ pub fn parse_command(message: &str) -> Result<(String, Command), ErrorResponse> 
                 name.to_string(),
             ))
         }
+        "QUIT" if string.len() < 2 => Ok(Command::QUIT(None)),
+        "QUIT" => {
+            let quit_msg = string[1..].join(" ");
+            Ok(Command::QUIT(Some(quit_msg)))
+        }
         _ => Err(ErrorResponse::UnknownCommand),
     };
 
     match command {
         Ok(cmd) => Ok((prefix, cmd)),
         Err(e) => Err(e),
+    }
+}
+
+pub fn execute_command(irc: &mut IRCServer, cmd: Command) -> Result<CmdResponse, ErrorResponse> {
+    match cmd {
+        Command::QUIT(quit_msg) => {
+            println!("User left the server\n{quit_msg:?}");
+            Ok(CmdResponse::None)
+        }
+        _ => Ok(CmdResponse::None),
     }
 }
