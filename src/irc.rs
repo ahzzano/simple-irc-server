@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::net::SocketAddr;
 
 use commands::Command;
-use commands::execute_command;
 use commands::parse_command;
 use responses::ErrorResponse;
 use tokio::io::AsyncBufReadExt;
@@ -22,8 +21,14 @@ pub struct IRCServer {
     users: HashMap<SocketAddr, User>,
 }
 
+enum SocketMessage {
+    Text(String),
+    Disconnect,
+}
+
 impl IRCServer {
     async fn disconnect_user(&mut self, addr: SocketAddr) {
+        println!("Disconnected");
         self.users.remove(&addr);
     }
 
@@ -34,11 +39,10 @@ impl IRCServer {
                     let user = User::default().with_nickname(nickname);
                     self.users.insert(*addr, user);
                 } else {
-                    if let Some(user) = self.users.get_mut(addr) {
-                        user.set_nickname(nickname);
-                        if !user.username.is_empty() {
-                            user.registered = true;
-                        }
+                    let user = self.users.get_mut(addr).unwrap();
+                    user.set_nickname(nickname);
+                    if !user.username.is_empty() {
+                        user.registered = true;
                     }
                 }
 
@@ -74,11 +78,13 @@ impl IRCServer {
 
                 match reader.read_line(&mut buffer).await {
                     Ok(0) => {
-                        println!("Reader disconnected");
+                        let _ = tx.send(SocketMessage::Disconnect).await;
                         break;
                     }
                     Ok(_) => {
-                        let _ = tx.send(buffer.trim().to_string()).await;
+                        let _ = tx
+                            .send(SocketMessage::Text(buffer.trim().to_string()))
+                            .await;
                     }
                     Err(e) => {
                         eprintln!("{e}");
@@ -88,16 +94,22 @@ impl IRCServer {
         });
 
         while let Some(message) = rx.recv().await {
-            match parse_command(&message) {
-                Ok((_prefix, cmd)) => {
-                    println!("Found command: {cmd:?}");
-                    let _ = self.exec_command(cmd, &_addr).await;
-                    println!("{0:?}", self.users);
-                    let _ = write.write_all(b"walpurgisnact\n").await;
-                }
-                Err(response_code) => {
-                    eprintln!("Err: {response_code:?}");
-                    let _ = write.write_u8(response_code as u8).await;
+            match &message {
+                SocketMessage::Text(msg) => match parse_command(&msg) {
+                    Ok((_prefix, cmd)) => {
+                        println!("Found command: {cmd:?}");
+                        let _ = self.exec_command(cmd, &_addr).await;
+                        println!("{0:?}", self.users);
+                        let _ = write.write_all(b"walpurgisnact\n").await;
+                    }
+                    Err(response_code) => {
+                        eprintln!("Err: {response_code:?}");
+                        let _ = write.write_u8(response_code as u8).await;
+                    }
+                },
+                SocketMessage::Disconnect => {
+                    self.disconnect_user(_addr).await;
+                    break;
                 }
             }
         }
