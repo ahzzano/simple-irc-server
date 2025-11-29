@@ -10,6 +10,7 @@ pub enum ErrorResponse {
     NoSuchServer = 402,
     UnknownCommand = 421,
     NeedMoreParams = 461,
+    AlreadyRegistered = 462,
 }
 
 #[derive(Debug)]

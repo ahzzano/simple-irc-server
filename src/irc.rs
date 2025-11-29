@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::iter::Map;
 use std::net::SocketAddr;
 
 use commands::Command;
@@ -11,16 +10,11 @@ use tokio::io::AsyncWriteExt;
 use tokio::io::BufReader;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::mpsc;
-use tokio::sync::oneshot;
+use user::User;
 
 pub mod commands;
 pub mod responses;
-
-#[derive(Default, Debug)]
-pub struct User {
-    nickname: String,
-    password: String,
-}
+pub mod user;
 
 #[derive(Debug)]
 pub struct IRCServer {
@@ -29,6 +23,44 @@ pub struct IRCServer {
 }
 
 impl IRCServer {
+    async fn disconnect_user(&mut self, addr: SocketAddr) {
+        self.users.remove(&addr);
+    }
+
+    async fn exec_command(&mut self, cmd: Command, addr: &SocketAddr) -> Result<(), ErrorResponse> {
+        match cmd {
+            Command::NICK(nickname) => {
+                if !self.users.contains_key(addr) {
+                    let user = User::default().with_nickname(nickname);
+                    self.users.insert(*addr, user);
+                } else {
+                    if let Some(user) = self.users.get_mut(addr) {
+                        user.set_nickname(nickname);
+                        if !user.username.is_empty() {
+                            user.registered = true;
+                        }
+                    }
+                }
+
+                Ok(())
+            }
+            Command::USER(username, mode, unused, realname) => {
+                if let Some(user) = self.users.get_mut(addr) {
+                    if user.registered {
+                        return Err(ErrorResponse::AlreadyRegistered);
+                    }
+                    user.set_username(username);
+                    user.set_realname(realname);
+                } else {
+                    let user = User::default().with_user(username, realname);
+                    self.users.insert(*addr, user);
+                }
+                Ok(())
+            }
+            _ => Ok(()),
+        }
+    }
+
     async fn process_socket(&mut self, socket: TcpStream) {
         let _addr = socket.peer_addr().unwrap();
         let (read, mut write) = tokio::io::split(socket);
@@ -47,7 +79,6 @@ impl IRCServer {
                     }
                     Ok(_) => {
                         let _ = tx.send(buffer.trim().to_string()).await;
-                        println!("Got message");
                     }
                     Err(e) => {
                         eprintln!("{e}");
@@ -60,7 +91,8 @@ impl IRCServer {
             match parse_command(&message) {
                 Ok((_prefix, cmd)) => {
                     println!("Found command: {cmd:?}");
-                    let _ = execute_command(self, cmd);
+                    let _ = self.exec_command(cmd, &_addr).await;
+                    println!("{0:?}", self.users);
                     let _ = write.write_all(b"walpurgisnact\n").await;
                 }
                 Err(response_code) => {
